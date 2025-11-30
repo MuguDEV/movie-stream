@@ -95,6 +95,14 @@ export const seedr = {
                 }
             });
 
+            // Save cookies if present
+            if (response.headers['set-cookie']) {
+                localStorage.setItem('seedr_cookies', JSON.stringify(response.headers['set-cookie']));
+            } else if (response.data && response.data.cookies) {
+                // Sometimes API returns cookies in body? Unlikely for Seedr but good fallback
+                localStorage.setItem('seedr_cookies', JSON.stringify(response.data.cookies));
+            }
+
             if (response.data && (response.data.success === true || response.data === 'OK')) {
                 return response.data;
             }

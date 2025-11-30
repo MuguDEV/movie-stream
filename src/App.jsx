@@ -201,10 +201,25 @@ function App() {
       return;
     }
 
+    // If torrents are missing (e.g. from search results), try fetching full details
+    let movieToPlay = movie;
+    if (!movieToPlay.torrents || movieToPlay.torrents.length === 0) {
+      try {
+        setLoadingMessage("Fetching movie details...");
+        const res = await api.getDetails(movie.id);
+        if (res.data.data.movie) {
+          movieToPlay = res.data.data.movie;
+        }
+      } catch (e) {
+        console.error("Error fetching details for playback:", e);
+      }
+    }
+
     // Find the best torrent hash
-    const torrent = movie.torrents?.find(t => t.quality === '1080p') || movie.torrents?.[0];
+    const torrent = movieToPlay.torrents?.find(t => t.quality === '1080p') || movieToPlay.torrents?.[0];
     if (!torrent) {
       alert("No torrent found for this movie.");
+      setLoadingMessage(null);
       return;
     }
 

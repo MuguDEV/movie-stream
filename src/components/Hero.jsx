@@ -43,7 +43,7 @@ const Hero = ({ movie, onPlay, wishlist, onToggleWishlist, onSurpriseMe }) => {
           </p>
 
           {/* Buttons */}
-          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 pt-4">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 pt-4 pb-8 md:pb-0">
             <button
               onClick={() => onPlay(movie)}
               className="flex items-center justify-center gap-2 bg-white text-black px-8 py-3 md:py-3.5 rounded-lg font-bold hover:scale-105 transition-transform duration-200 shadow-lg shadow-white/10"

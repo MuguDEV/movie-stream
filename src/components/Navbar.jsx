@@ -1,17 +1,41 @@
 import React, { useState, useEffect } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Download } from 'lucide-react';
 
 const Navbar = ({ onLoginClick, onSearch, user, onLogout, onWishlistClick, onExploreClick }) => {
     const [scrolled, setScrolled] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [deferredPrompt, setDeferredPrompt] = useState(null);
+    const [showInstallButton, setShowInstallButton] = useState(false);
 
     useEffect(() => {
         const handleScroll = () => {
             setScrolled(window.scrollY > 20);
         };
         window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
+
+        // PWA Install Prompt Listener
+        const handleInstallPrompt = (e) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+            setShowInstallButton(true);
+        };
+        window.addEventListener('beforeinstallprompt', handleInstallPrompt);
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
+        };
     }, []);
+
+    const handleInstallClick = async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            setShowInstallButton(false);
+        }
+        setDeferredPrompt(null);
+    };
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -41,18 +65,31 @@ const Navbar = ({ onLoginClick, onSearch, user, onLogout, onWishlistClick, onExp
 
                 {/* Desktop Actions */}
                 <div className="hidden md:flex items-center gap-6">
-                    <div className="relative group">
-                        <Search className="w-5 h-5 text-white/70 group-hover:text-white transition-colors absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <input
-                            type="text"
-                            placeholder="Search"
-                            value={searchQuery}
-                            onChange={(e) => {
-                                setSearchQuery(e.target.value);
-                                onSearch(e.target.value);
-                            }}
-                            className="bg-white/10 border border-white/10 rounded-lg py-1.5 pl-10 pr-4 text-sm text-white placeholder-white/50 focus:outline-none focus:bg-white/20 focus:w-64 w-48 transition-all duration-300"
-                        />
+                    <div className="flex items-center gap-4">
+                        {/* Install App Button */}
+                        {showInstallButton && (
+                            <button
+                                onClick={handleInstallClick}
+                                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-full text-xs font-medium transition-colors animate-fade-in"
+                            >
+                                <Download className="w-3 h-3" />
+                                <span>Install App</span>
+                            </button>
+                        )}
+
+                        <div className="relative group">
+                            <Search className="w-5 h-5 text-white/70 group-hover:text-white transition-colors absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <input
+                                type="text"
+                                placeholder="Search"
+                                value={searchQuery}
+                                onChange={(e) => {
+                                    setSearchQuery(e.target.value);
+                                    onSearch(e.target.value);
+                                }}
+                                className="bg-white/10 border border-white/10 rounded-lg py-1.5 pl-10 pr-4 text-sm text-white placeholder-white/50 focus:outline-none focus:bg-white/20 focus:w-64 w-48 transition-all duration-300"
+                            />
+                        </div>
                     </div>
 
                     <button
@@ -91,8 +128,18 @@ const Navbar = ({ onLoginClick, onSearch, user, onLogout, onWishlistClick, onExp
                     )}
                 </div>
 
-                {/* Mobile Search Icon (opens full search in menu) */}
+                {/* Mobile Search Icon & Install Button */}
                 <div className="md:hidden flex items-center gap-4">
+                    {showInstallButton && (
+                        <button
+                            onClick={handleInstallClick}
+                            className="flex items-center gap-2 bg-white/10 text-white px-3 py-1.5 rounded-full text-xs font-medium"
+                        >
+                            <Download className="w-3 h-3" />
+                            <span>Install</span>
+                        </button>
+                    )}
+
                     {user ? (
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-lg">
                             {user.username?.[0]?.toUpperCase() || 'U'}
