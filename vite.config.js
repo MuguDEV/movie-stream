@@ -13,7 +13,7 @@ export default defineConfig({
       protocolImports: true,
     }),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
         name: 'Movies',
@@ -44,6 +44,12 @@ export default defineConfig({
     })
   ],
   server: {
+    middlewareMode: false,
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+      port: 5173
+    },
     proxy: {
       '/seedr': {
         target: 'https://www.seedr.cc',
@@ -62,9 +68,14 @@ export default defineConfig({
         }
       },
       '/yts': {
-        target: 'https://yts.lt/api/v2',
+        target: 'https://yts.bz/api/v2',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/yts/, ''),
+      },
+      '/yts-bz': {
+        target: 'https://yts.bz',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/yts-bz/, ''),
       }
     }
   }

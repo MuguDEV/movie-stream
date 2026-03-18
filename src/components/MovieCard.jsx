@@ -5,18 +5,18 @@ const MovieCard = ({ movie, onClick }) => {
     return (
         <div
             onClick={() => onClick && onClick(movie)}
-            className="relative group min-w-[130px] md:min-w-[200px] aspect-[2/3] cursor-pointer transition-all duration-300 hover:scale-105 hover:z-10"
+            className="relative group min-w-[100px] sm:min-w-[130px] md:min-w-[180px] lg:min-w-[200px] aspect-[2/3] cursor-pointer transition-all duration-300 sm:hover:scale-105 sm:hover:z-10 active:scale-95 snap-start"
         >
             {/* Image */}
             <img
                 src={movie.medium_cover_image || movie.image}
                 alt={movie.title}
-                className="w-full h-full object-cover rounded-xl shadow-lg group-hover:shadow-2xl transition-all duration-300 brightness-90 group-hover:brightness-110"
+                className="w-full h-full object-cover rounded-lg sm:rounded-xl shadow-lg sm:group-hover:shadow-2xl transition-all duration-300 sm:brightness-90 sm:group-hover:brightness-110"
                 loading="lazy"
             />
 
-            {/* Overlay Content (Visible on Hover) */}
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl flex items-center justify-center backdrop-blur-[2px]">
+            {/* Overlay Content (Visible on Hover - Desktop only) */}
+            <div className="hidden sm:flex absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl items-center justify-center backdrop-blur-[2px]">
                 <div className="transform scale-90 group-hover:scale-100 transition-transform duration-300 flex flex-col items-center gap-3">
                     <button className="bg-white text-black rounded-full p-3 shadow-xl hover:scale-110 transition-transform">
                         <Play className="w-6 h-6 fill-current pl-1" />

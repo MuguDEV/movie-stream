@@ -19,7 +19,7 @@ const Modal = ({ movie, onClose }) => {
     }, [movie]);
 
     const handlePlay = async () => {
-        if (!movie.torrents || movie.torrents.length === 0) {
+        if (!movie?.torrents || movie.torrents.length === 0) {
             setStatus('error');
             setErrorMsg('No torrents available.');
             return;
@@ -30,16 +30,19 @@ const Modal = ({ movie, onClose }) => {
 
         setStatus('processing');
         setProgressMsg('Preparing your stream...');
+        setErrorMsg(''); // Clear previous errors
 
         try {
             const url = await addAndPlay(torrent.hash, movie.title);
-            console.log("Modal: Playing URL:", url);
+            if (!url) {
+                throw new Error('No stream URL received from server');
+            }
             setVideoUrl(url);
             setStatus('playing');
         } catch (err) {
-            console.error(err);
+            console.error('Play error:', err);
             setStatus('error');
-            setErrorMsg(err.message || 'Failed to play video');
+            setErrorMsg(err.message || 'Failed to play video. Please try again.');
         }
     };
 
@@ -266,15 +269,38 @@ const Modal = ({ movie, onClose }) => {
                                         <div style={{
                                             background: 'rgba(255, 59, 48, 0.15)',
                                             color: '#ff453a',
-                                            padding: '12px 20px',
+                                            padding: '16px 20px',
                                             borderRadius: '12px',
                                             backdropFilter: 'blur(10px)',
                                             border: '1px solid rgba(255, 69, 58, 0.2)',
-                                            maxWidth: 'fit-content',
+                                            maxWidth: '500px',
                                             fontSize: '0.95rem',
-                                            fontWeight: '500'
+                                            fontWeight: '500',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            gap: '12px'
                                         }}>
-                                            {errorMsg}
+                                            <span>{errorMsg}</span>
+                                            <button
+                                                onClick={() => {
+                                                    setErrorMsg('');
+                                                    setStatus('idle');
+                                                }}
+                                                style={{
+                                                    background: 'rgba(255, 255, 255, 0.2)',
+                                                    border: 'none',
+                                                    color: '#ff453a',
+                                                    padding: '6px 12px',
+                                                    borderRadius: '6px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: '600',
+                                                    whiteSpace: 'nowrap'
+                                                }}
+                                            >
+                                                Dismiss
+                                            </button>
                                         </div>
                                     )}
                                 </div>

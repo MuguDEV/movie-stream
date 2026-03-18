@@ -4,44 +4,111 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile viewport fix for Android */
+:root {
+  --vh: 1vh;
+}
+
 @layer base {
   body {
     @apply bg-black text-white antialiased;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+  }
+
+  /* Prevent pull-to-refresh on Android */
+  html {
+    overscroll-behavior: none;
   }
 }
 
 body {
   margin: 0;
-  min-width: 320px;
+  min-width: 280px;
   min-height: 100vh;
+  min-height: calc(var(--vh, 1vh) * 100);
   background-color: #000;
   overflow-x: hidden;
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* Safe area insets for notched devices */
+@supports (padding: max(0px)) {
+  .safe-area-inset {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
 }
 
-::-webkit-scrollbar-track {
-  background: #000;
+/* Improved touch targets for Android - mobile only, exclude player controls */
+@media (max-width: 768px) {
+  button:not(.plyr__control):not([class*="scale-"]) {
+    min-height: 44px;
+  }
 }
 
-::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 4px;
+/* Android-specific input fixes */
+input, select, textarea {
+  font-size: 16px !important; /* Prevents zoom on focus in Android */
+  -webkit-appearance: none;
+  appearance: none;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
+select {
+  background-image: none;
+}
+
+/* Hide scrollbar on mobile but keep functionality */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
+  * {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Desktop scrollbar */
+@media (min-width: 769px) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #000;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+}
+
+/* Horizontal scroll for content rows - smooth on Android */
+.scroll-container {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+}
+
+.scroll-container > * {
+  scroll-snap-align: start;
 }
 
 /* Plyr Customization for Apple TV Look */
 .plyr {
   --plyr-color-main: #fff;
-  /* White accent for Apple TV look */
   --plyr-video-background: #000;
   --plyr-menu-background: rgba(20, 20, 20, 0.9);
   --plyr-menu-color: #fff;
@@ -56,10 +123,47 @@ body {
   padding-bottom: 40px !important;
   padding-top: 40px !important;
   z-index: 2147483647 !important;
-  /* Max z-index */
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: all !important;
+}
+
+/* Mobile player controls - larger touch targets */
+@media (max-width: 768px) {
+  .plyr__controls {
+    padding-bottom: 20px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-top: 20px !important;
+  }
+
+  .plyr__control {
+    padding: 12px !important;
+  }
+
+  .plyr__control svg {
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  .plyr__control--overlaid {
+    width: 64px !important;
+    height: 64px !important;
+  }
+
+  .plyr__control--overlaid svg {
+    width: 32px !important;
+    height: 32px !important;
+  }
+}
+
+/* Tablet player controls */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .plyr__controls {
+    padding-bottom: 30px !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
 }
 
 /* Icons */
@@ -106,4 +210,64 @@ body {
 
 video {
   object-fit: contain;
+}
+
+/* Animation utilities */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out forwards;
+}
+
+/* Mobile: Use slide-up for bottom sheet modals */
+@media (max-width: 640px) {
+  .animate-fade-in-up {
+    animation: slide-up 0.3s ease-out forwards;
+  }
+}
+
+/* Loading skeleton animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #1c1c1e 0%, #2a2a2e 50%, #1c1c1e 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Image loading states */
+img {
+  background-color: #1c1c1e;
 }

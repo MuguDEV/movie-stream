@@ -12,9 +12,10 @@ const VideoPlayer = ({ options, onReady }) => {
         const video = videoRef.current;
         if (!video) return;
 
-        const source = options.sources[0].src;
-        const type = options.sources[0].type;
-        console.log("VideoPlayer: Initializing with source:", source, "Type:", type);
+        const source = options.sources?.[0]?.src;
+        const type = options.sources?.[0]?.type;
+        if (!source) return;
+
         const isHls = type === 'application/x-mpegURL' || source.includes('.m3u8');
 
         // Default Plyr options
@@ -41,7 +42,7 @@ const VideoPlayer = ({ options, onReady }) => {
             window.player = playerRef.current;
 
             // Fix for controls not showing: ensure Plyr container has correct z-index context
-            if (playerRef.current.elements.container) {
+            if (playerRef.current.elements?.container) {
                 playerRef.current.elements.container.style.height = '100%';
                 playerRef.current.elements.container.style.width = '100%';
             }
@@ -51,42 +52,38 @@ const VideoPlayer = ({ options, onReady }) => {
 
         if (isHls && Hls.isSupported()) {
             // Initialize HLS.js
-            console.log("Initializing HLS.js for source:", source);
             const hls = new Hls({
-                maxBufferHole: 2.5, // Increase tolerance for buffer holes
-                highBufferWatchdogPeriod: 3, // Check buffer more frequently
-                fragLoadingTimeOut: 20000, // Increase timeout for fragment loading
+                maxBufferHole: 2.5,
+                highBufferWatchdogPeriod: 3,
+                fragLoadingTimeOut: 20000,
             });
             hlsRef.current = hls;
             hls.loadSource(source);
             hls.attachMedia(video);
 
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                console.log("HLS Manifest Parsed, initializing Plyr...");
                 initPlyr();
                 // Attempt autoplay
                 if (options.autoplay) {
                     const playPromise = video.play();
                     if (playPromise !== undefined) {
-                        playPromise.catch(e => console.log("Autoplay blocked", e));
+                        playPromise.catch(e => {
+                            // Autoplay blocked - silent fail
+                        });
                     }
                 }
             });
 
             hls.on(Hls.Events.ERROR, function (event, data) {
-                console.error("HLS Error:", event, JSON.stringify(data, null, 2));
                 if (data.fatal) {
                     switch (data.type) {
                         case Hls.ErrorTypes.NETWORK_ERROR:
-                            console.log("fatal network error encountered, try to recover");
                             hls.startLoad();
                             break;
                         case Hls.ErrorTypes.MEDIA_ERROR:
-                            console.log("fatal media error encountered, try to recover");
                             hls.recoverMediaError();
                             break;
                         default:
-                            console.log("cannot recover, destroying HLS");
                             hls.destroy();
                             break;
                     }
@@ -94,7 +91,6 @@ const VideoPlayer = ({ options, onReady }) => {
             });
         } else {
             // For other video types or if HLS is not supported
-            console.log("HLS not supported or not HLS source, initializing Plyr directly.");
             initPlyr();
         }
 

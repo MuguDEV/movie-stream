@@ -14,13 +14,17 @@ const CORS_PROXY = 'https://corsproxy.io/?';
 const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
-    }
+    },
+    timeout: 30000 // 30 second timeout for all requests
 });
 
 // Add response interceptor to handle 401s globally
 api.interceptors.response.use(
     response => response,
     error => {
+        if (error.code === 'ECONNABORTED') {
+            console.error('Request timeout - server took too long to respond');
+        }
         if (error.response && (error.response.status === 401 || error.response.status === 403)) {
             console.warn("Session expired or unauthorized. Clearing credentials.");
             localStorage.removeItem('seedr_user');
@@ -31,6 +35,12 @@ api.interceptors.response.use(
     }
 );
 
+// Helper function - use YTS images directly without rewriting
+const rewriteImageUrls = (data) => {
+    // Just return data as-is, load images directly from yts.bz
+    return data;
+};
+
 // Helper to get headers with cookies and potential Bearer token
 const getHeaders = (isForm = false) => {
     const headers = {
@@ -38,11 +48,9 @@ const getHeaders = (isForm = false) => {
     };
 
     const storedCookies = localStorage.getItem('seedr_cookies');
-    console.log('getHeaders: storedCookies exists?', !!storedCookies);
     if (storedCookies) {
         try {
             const cookies = JSON.parse(storedCookies);
-            console.log('getHeaders: parsed cookies', cookies);
 
             // 1. Send as custom header 'x-seedr-cookie'.
             // Vite proxy (vite.config.js) will rewrite this to 'Cookie' before sending to Seedr.
@@ -54,29 +62,50 @@ const getHeaders = (isForm = false) => {
             const sessionCookie = cookies.find(c => c.trim().startsWith('RSESS_session='));
             if (sessionCookie) {
                 const token = sessionCookie.split('=')[1].split(';')[0];
-                console.log('getHeaders: found token', token);
                 if (token) {
                     headers['Authorization'] = `Bearer ${token}`;
                 }
             }
         } catch (e) {
-            console.error("Error parsing cookies", e);
+            // Silent fail - invalid cookie data
         }
-    } else {
-        console.warn('getHeaders: No seedr_cookies in localStorage. User might need to re-login.');
     }
     return headers;
 };
 
 export const movies = {
-    getTrending: (page = 1, limit = 8) => api.get(`${YTS_BASE_URL}/list_movies.json?sort_by=download_count&limit=${limit}&page=${page}`),
-    getTopRated: (page = 1, limit = 8) => api.get(`${YTS_BASE_URL}/list_movies.json?sort_by=rating&limit=${limit}&page=${page}`),
-    getAction: (page = 1, limit = 8) => api.get(`${YTS_BASE_URL}/list_movies.json?genre=action&limit=${limit}&page=${page}`),
-    getComedy: (page = 1, limit = 8) => api.get(`${YTS_BASE_URL}/list_movies.json?genre=comedy&limit=${limit}&page=${page}`),
-    search: (query) => api.get(`${YTS_BASE_URL}/list_movies.json?query_term=${query}`),
-    getDetails: (id) => api.get(`${YTS_BASE_URL}/movie_details.json?movie_id=${id}&with_images=true&with_cast=true`),
-    getSuggestions: (id) => api.get(`${YTS_BASE_URL}/movie_suggestions.json?movie_id=${id}`),
-    getMovies: (params) => api.get(`${YTS_BASE_URL}/list_movies.json`, { params })
+    getTrending: async (page = 1, limit = 8) => {
+        const res = await api.get(`${YTS_BASE_URL}/list_movies.json?sort_by=download_count&limit=${limit}&page=${page}`);
+        return { ...res, data: rewriteImageUrls(res.data) };
+    },
+    getTopRated: async (page = 1, limit = 8) => {
+        const res = await api.get(`${YTS_BASE_URL}/list_movies.json?sort_by=rating&limit=${limit}&page=${page}`);
+        return { ...res, data: rewriteImageUrls(res.data) };
+    },
+    getAction: async (page = 1, limit = 8) => {
+        const res = await api.get(`${YTS_BASE_URL}/list_movies.json?genre=action&limit=${limit}&page=${page}`);
+        return { ...res, data: rewriteImageUrls(res.data) };
+    },
+    getComedy: async (page = 1, limit = 8) => {
+        const res = await api.get(`${YTS_BASE_URL}/list_movies.json?genre=comedy&limit=${limit}&page=${page}`);
+        return { ...res, data: rewriteImageUrls(res.data) };
+    },
+    search: async (query) => {
+        const res = await api.get(`${YTS_BASE_URL}/list_movies.json?query_term=${query}`);
+        return { ...res, data: rewriteImageUrls(res.data) };
+    },
+    getDetails: async (id) => {
+        const res = await api.get(`${YTS_BASE_URL}/movie_details.json?movie_id=${id}&with_images=true&with_cast=true`);
+        return { ...res, data: rewriteImageUrls(res.data) };
+    },
+    getSuggestions: async (id) => {
+        const res = await api.get(`${YTS_BASE_URL}/movie_suggestions.json?movie_id=${id}`);
+        return { ...res, data: rewriteImageUrls(res.data) };
+    },
+    getMovies: async (params) => {
+        const res = await api.get(`${YTS_BASE_URL}/list_movies.json`, { params });
+        return { ...res, data: rewriteImageUrls(res.data) };
+    }
 };
 
 export const seedr = {
@@ -149,7 +178,46 @@ export const seedr = {
     },
 
     getVideo: async (fileId) => {
-        return api.get(`${SEEDR_BASE_URL}/presentation/fs/item/${fileId}/video/url`, { headers: getHeaders() });
+        if (!fileId) {
+            throw new Error('Invalid file ID');
+        }
+
+        // Try the main endpoint first
+        try {
+            console.log(`Requesting stream URL for file: ${fileId}`);
+            const res = await api.get(`${SEEDR_BASE_URL}/presentation/fs/item/${fileId}/video/url`, { 
+                headers: getHeaders(),
+                timeout: 20000 
+            });
+            if (res.data && res.data.url) {
+                console.log('Got stream URL from primary endpoint');
+                return res;
+            } else if (res.data) {
+                console.warn('Response received but no URL in data:', res.data);
+                throw new Error('No stream URL in response');
+            }
+        } catch (err) {
+            console.warn('Primary endpoint failed:', err.message);
+            // Fall back to alternative endpoint
+        }
+        
+        // Alternative: Try direct streaming endpoint
+        try {
+            console.log('Trying alternative endpoint...');
+            const res = await api.get(`${SEEDR_BASE_URL}/api/file/${fileId}/stream`, { 
+                headers: getHeaders(),
+                timeout: 20000 
+            });
+            if (res.data && res.data.url) {
+                console.log('Got stream URL from alternative endpoint');
+                return res;
+            }
+        } catch (err) {
+            console.warn('Alternative endpoint failed:', err.message);
+        }
+        
+        // If both fail, throw error
+        throw new Error('Unable to get video stream URL from Seedr. Please check your account status and try again.');
     }
 };
 

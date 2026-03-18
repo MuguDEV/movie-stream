@@ -39,6 +39,45 @@ function App() {
 
   const { addAndPlay } = useSeedr();
 
+  // Fix viewport height for Android (100vh issue)
+  useEffect(() => {
+    const setVH = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+
+    setVH();
+    window.addEventListener('resize', setVH);
+    window.addEventListener('orientationchange', () => {
+      setTimeout(setVH, 100);
+    });
+
+    return () => {
+      window.removeEventListener('resize', setVH);
+    };
+  }, []);
+
+  // Global error handler
+  useEffect(() => {
+    const handleError = (event) => {
+      console.error('Uncaught error:', event.error);
+      event.preventDefault(); // Prevent page reload
+    };
+
+    const handleUnhandledRejection = (event) => {
+      console.error('Unhandled promise rejection:', event.reason);
+      event.preventDefault(); // Prevent page reload
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
   // Check for existing login, wishlist, and continue watching
   useEffect(() => {
     const storedUser = localStorage.getItem('seedr_user');
@@ -106,12 +145,12 @@ function App() {
           api.getComedy(randomPage())
         ]);
 
-        setTrending(trendingRes.data.data.movies || []);
-        setTopRated(topRatedRes.data.data.movies || []);
-        setAction(actionRes.data.data.movies || []);
-        setComedy(comedyRes.data.data.movies || []);
+        setTrending(trendingRes.data?.data?.movies || []);
+        setTopRated(topRatedRes.data?.data?.movies || []);
+        setAction(actionRes.data?.data?.movies || []);
+        setComedy(comedyRes.data?.data?.movies || []);
       } catch (error) {
-        console.error("Error fetching movies:", error);
+        // Silent fail - API error
       } finally {
         setLoading(false);
       }
@@ -127,13 +166,15 @@ function App() {
     if (movieId) {
       api.getDetails(movieId)
         .then(res => {
-          if (res.data.data.movie) {
+          if (res.data?.data?.movie) {
             setSelectedMovie(res.data.data.movie);
             // Clean URL without reloading
             window.history.replaceState({}, document.title, window.location.pathname);
           }
         })
-        .catch(err => console.error("Error fetching shared movie:", err));
+        .catch(err => {
+          // Silent fail
+        });
     }
   }, []);
 
@@ -143,7 +184,7 @@ function App() {
       // Random page 1-50
       const page = Math.floor(Math.random() * 50) + 1;
       const res = await api.getTopRated(page);
-      const movies = res.data.data.movies || [];
+      const movies = res.data?.data?.movies || [];
 
       if (movies.length > 0) {
         const randomMovie = movies[Math.floor(Math.random() * movies.length)];
@@ -154,7 +195,7 @@ function App() {
         if (fallback) setSelectedMovie(fallback);
       }
     } catch (error) {
-      console.error("Surprise Me error:", error);
+      // Silent fail
     } finally {
       setLoadingMessage(null);
     }
@@ -185,9 +226,10 @@ function App() {
     setIsSearching(true);
     try {
       const res = await api.search(query);
-      setSearchResults(res.data.data.movies || []);
+      setSearchResults(res.data?.data?.movies || []);
     } catch (error) {
-      console.error("Search error:", error);
+      // Silent fail - search error
+      setSearchResults([]);
     }
   };
 
@@ -203,15 +245,15 @@ function App() {
 
     // If torrents are missing (e.g. from search results), try fetching full details
     let movieToPlay = movie;
-    if (!movieToPlay.torrents || movieToPlay.torrents.length === 0) {
+    if (!movieToPlay?.torrents || movieToPlay.torrents.length === 0) {
       try {
         setLoadingMessage("Fetching movie details...");
         const res = await api.getDetails(movie.id);
-        if (res.data.data.movie) {
+        if (res.data?.data?.movie) {
           movieToPlay = res.data.data.movie;
         }
       } catch (e) {
-        console.error("Error fetching details for playback:", e);
+        // Silent fail
       }
     }
 
@@ -223,10 +265,7 @@ function App() {
       return;
     }
 
-    // Show loading state
     const showToast = (msg) => {
-      // Simple toast implementation using DOM for now, or we could add a Toast component
-      // For this iteration, we'll use a state-based overlay in the return JSX
       setLoadingMessage(msg);
     };
 
@@ -251,11 +290,9 @@ function App() {
         return newHistory;
       });
     } catch (error) {
-      console.error("Playback error:", error);
       setLoadingMessage(null);
 
       // If it's a 401, the global handler will take care of it (logout + open login modal)
-      // So we don't need to show a generic alert
       if (error.response && error.response.status === 401) {
         return;
       }
@@ -312,7 +349,7 @@ function App() {
               onSurpriseMe={handleSurpriseMe}
             />
 
-            <div className="relative z-10 -mt-32 pb-20 space-y-8">
+            <div className="relative z-10 -mt-10 sm:-mt-20 md:-mt-32 pb-20 space-y-4 sm:space-y-6 md:space-y-8">
               {continueWatching.length > 0 && (
                 <ContentRow title="Continue Watching" movies={continueWatching} onMovieClick={handleMovieClick} />
               )}

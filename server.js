@@ -30,10 +30,19 @@ app.use('/seedr', createProxyMiddleware({
 
 // Proxy for YTS
 app.use('/yts', createProxyMiddleware({
-    target: 'https://yts.lt/api/v2',
+    target: 'https://yts.bz/api/v2',
     changeOrigin: true,
     pathRewrite: {
         '^/yts': '', // remove /yts prefix
+    }
+}));
+
+// Proxy for YTS Images (direct from yts.bz)
+app.use('/yts-bz', createProxyMiddleware({
+    target: 'https://yts.bz',
+    changeOrigin: true,
+    pathRewrite: {
+        '^/yts-bz': '', // remove /yts-bz prefix
     }
 }));
 
