@@ -16,30 +16,34 @@ const ContentRow = ({ title, movies, onMovieClick, onTitleClick }) => {
     if (!movies || movies.length === 0) return null;
 
     return (
-        <div className="space-y-2 sm:space-y-3 md:space-y-4 py-3 sm:py-5 md:py-8 relative group/row">
+        <div className="space-y-3 sm:space-y-4 md:space-y-6 py-4 sm:py-6 md:py-8 relative group/row px-3 sm:px-4 md:px-12">
             {/* Title */}
-            <h2
-                onClick={onTitleClick}
-                className={`text-base sm:text-lg md:text-2xl font-bold text-white px-3 sm:px-4 md:px-12 flex items-center gap-1 sm:gap-2 transition-colors ${onTitleClick ? 'cursor-pointer hover:text-blue-400 group-hover/title:text-blue-400' : ''}`}
-            >
-                {title}
-                {onTitleClick && <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-white/50" />}
-            </h2>
+            <div className="flex items-center justify-between">
+                <h2
+                    onClick={onTitleClick}
+                    className={`text-lg sm:text-xl md:text-2xl font-bold text-white flex items-center gap-2 transition-all duration-300 ${onTitleClick ? 'cursor-pointer group/title hover:text-indigo-400' : ''}`}
+                >
+                    {title}
+                    {onTitleClick && <ChevronRight className="w-5 h-5 text-white/50 group-hover/title:text-indigo-400 transition-colors" />}
+                </h2>
+            </div>
 
             {/* Scroll Container */}
-            <div className="relative">
+            <div className="relative -mx-3 sm:-mx-4 md:-mx-12 px-3 sm:px-4 md:px-12">
                 {/* Left Arrow - Hidden on mobile */}
                 <button
                     onClick={() => scroll('left')}
-                    className="hidden sm:flex absolute left-0 top-0 bottom-0 w-12 md:w-16 bg-gradient-to-r from-black/80 to-transparent z-20 items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 disabled:opacity-0 cursor-pointer"
+                    className="hidden sm:flex absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-black via-black/80 to-transparent z-20 items-center justify-center opacity-0 group-hover/row:opacity-100 transition-all duration-300 cursor-pointer rounded-l-xl"
                 >
-                    <ChevronLeft className="w-8 h-8 text-white drop-shadow-lg" />
+                    <div className="glass-dark p-3 rounded-full hover:bg-white/20 transition-all">
+                        <ChevronLeft className="w-6 h-6 text-white drop-shadow-lg" />
+                    </div>
                 </button>
 
                 {/* Cards Rail */}
                 <div
                     ref={rowRef}
-                    className="flex gap-2.5 sm:gap-4 md:gap-6 overflow-x-auto scrollbar-hide px-3 sm:px-4 md:px-12 pb-4 sm:pb-6 md:pb-8 pt-1 sm:pt-2 snap-x scroll-container"
+                    className="flex gap-3 sm:gap-4 md:gap-6 overflow-x-auto scrollbar-hide pb-6 pt-2 snap-x scroll-container"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
                     {movies.map((movie) => (
@@ -50,9 +54,11 @@ const ContentRow = ({ title, movies, onMovieClick, onTitleClick }) => {
                 {/* Right Arrow - Hidden on mobile */}
                 <button
                     onClick={() => scroll('right')}
-                    className="hidden sm:flex absolute right-0 top-0 bottom-0 w-12 md:w-16 bg-gradient-to-l from-black/80 to-transparent z-20 items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 cursor-pointer"
+                    className="hidden sm:flex absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-black via-black/80 to-transparent z-20 items-center justify-center opacity-0 group-hover/row:opacity-100 transition-all duration-300 cursor-pointer rounded-r-xl"
                 >
-                    <ChevronRight className="w-8 h-8 text-white drop-shadow-lg" />
+                    <div className="glass-dark p-3 rounded-full hover:bg-white/20 transition-all">
+                        <ChevronRight className="w-6 h-6 text-white drop-shadow-lg" />
+                    </div>
                 </button>
             </div>
         </div>

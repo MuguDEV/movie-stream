@@ -324,86 +324,93 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans selection:bg-white/20">
-      <Navbar
-        user={user}
-        onLoginClick={() => setIsLoginOpen(true)}
-        onLogout={handleLogout}
-        onSearch={handleSearch}
-        onWishlistClick={() => setIsWishlistOpen(true)}
-        onExploreClick={() => {
-          setExploreInitialGenre('all');
-          setExploreInitialSort('date_added');
-          setIsExploreOpen(true);
-        }}
-      />
+    <div className="min-h-screen bg-black text-white font-sans selection:bg-indigo-500/30 relative overflow-x-hidden">
+      {/* Modern Background Gradient */}
+      <div className="fixed inset-0 bg-gradient-to-br from-indigo-900/10 via-black to-purple-900/10 pointer-events-none z-0" />
+      <div className="fixed top-0 left-1/4 w-96 h-96 bg-indigo-600/5 rounded-full blur-3xl pointer-events-none z-0" />
+      <div className="fixed bottom-0 right-1/4 w-96 h-96 bg-purple-600/5 rounded-full blur-3xl pointer-events-none z-0" />
+      
+      <div className="relative z-10">
+        <Navbar
+          user={user}
+          onLoginClick={() => setIsLoginOpen(true)}
+          onLogout={handleLogout}
+          onSearch={handleSearch}
+          onWishlistClick={() => setIsWishlistOpen(true)}
+          onExploreClick={() => {
+            setExploreInitialGenre('all');
+            setExploreInitialSort('date_added');
+            setIsExploreOpen(true);
+          }}
+        />
 
-      <main>
-        {!isSearching ? (
-          <>
-            <Hero
-              movie={trending[0]}
-              onPlay={handleMovieClick}
-              wishlist={wishlist}
-              onToggleWishlist={toggleWishlist}
-              onSurpriseMe={handleSurpriseMe}
-            />
+        <main>
+          {!isSearching ? (
+            <>
+              <Hero
+                movie={trending[0]}
+                onPlay={handleMovieClick}
+                wishlist={wishlist}
+                onToggleWishlist={toggleWishlist}
+                onSurpriseMe={handleSurpriseMe}
+              />
 
-            <div className="relative z-10 -mt-10 sm:-mt-20 md:-mt-32 pb-20 space-y-4 sm:space-y-6 md:space-y-8">
-              {continueWatching.length > 0 && (
-                <ContentRow title="Continue Watching" movies={continueWatching} onMovieClick={handleMovieClick} />
+              <div className="relative -mt-10 sm:-mt-20 md:-mt-32 pb-20 space-y-4 sm:space-y-6 md:space-y-8">
+                {continueWatching.length > 0 && (
+                  <ContentRow title="Continue Watching" movies={continueWatching} onMovieClick={handleMovieClick} />
+                )}
+                <ContentRow
+                  title="Latest Movies"
+                  movies={trending}
+                  onMovieClick={handleMovieClick}
+                  onTitleClick={() => handleCategoryClick('all', 'date_added')}
+                />
+                <ContentRow
+                  title="Hit Movies"
+                  movies={topRated}
+                  onMovieClick={handleMovieClick}
+                  onTitleClick={() => handleCategoryClick('all', 'rating')}
+                />
+                <ContentRow
+                  title="Action Thrillers"
+                  movies={action}
+                  onMovieClick={handleMovieClick}
+                  onTitleClick={() => handleCategoryClick('Action', 'date_added')}
+                />
+                <ContentRow
+                  title="Comedy Series"
+                  movies={comedy}
+                  onMovieClick={handleMovieClick}
+                  onTitleClick={() => handleCategoryClick('Comedy', 'date_added')}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="pt-32 px-4 md:px-12 pb-20">
+              <h2 className="text-2xl font-bold text-white mb-8 gradient-text">Search Results</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-6">
+                {searchResults.map(movie => (
+                  <div key={movie.id} onClick={() => handleMovieClick(movie)} className="cursor-pointer group">
+                    <img
+                      src={movie.medium_cover_image || movie.large_cover_image}
+                      alt={movie.title}
+                      loading="lazy"
+                      className="w-full aspect-[2/3] object-cover rounded-xl shadow-lg group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <h3 className="mt-3 text-sm font-medium text-white group-hover:text-indigo-400 transition-colors truncate">{movie.title}</h3>
+                    <p className="text-xs text-white/50">{movie.year}</p>
+                  </div>
+                ))}
+              </div>
+              {searchResults.length === 0 && (
+                <p className="text-white/50 text-center py-12">No results found.</p>
               )}
-              <ContentRow
-                title="Latest Movies"
-                movies={trending}
-                onMovieClick={handleMovieClick}
-                onTitleClick={() => handleCategoryClick('all', 'date_added')}
-              />
-              <ContentRow
-                title="Hit Movies"
-                movies={topRated}
-                onMovieClick={handleMovieClick}
-                onTitleClick={() => handleCategoryClick('all', 'rating')}
-              />
-              <ContentRow
-                title="Action Thrillers"
-                movies={action}
-                onMovieClick={handleMovieClick}
-                onTitleClick={() => handleCategoryClick('Action', 'date_added')}
-              />
-              <ContentRow
-                title="Comedy Series"
-                movies={comedy}
-                onMovieClick={handleMovieClick}
-                onTitleClick={() => handleCategoryClick('Comedy', 'date_added')}
-              />
             </div>
-          </>
-        ) : (
-          <div className="pt-32 px-4 md:px-12 pb-20">
-            <h2 className="text-2xl font-bold text-white mb-8">Search Results</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-6">
-              {searchResults.map(movie => (
-                <div key={movie.id} onClick={() => handleMovieClick(movie)} className="cursor-pointer group">
-                  <img
-                    src={movie.medium_cover_image || movie.large_cover_image}
-                    alt={movie.title}
-                    loading="lazy"
-                    className="w-full aspect-[2/3] object-cover rounded-xl shadow-lg group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <h3 className="mt-3 text-sm font-medium text-white group-hover:text-blue-400 transition-colors truncate">{movie.title}</h3>
-                  <p className="text-xs text-white/50">{movie.year}</p>
-                </div>
-              ))}
-            </div>
-            {searchResults.length === 0 && (
-              <p className="text-white/50">No results found.</p>
-            )}
-          </div>
-        )}
-      </main>
+          )}
+        </main>
 
-      <Footer />
+        <Footer />
+      </div>
 
       <Suspense fallback={null}>
         <LoginModal
@@ -420,6 +427,8 @@ function App() {
           wishlist={wishlist}
           onToggleWishlist={toggleWishlist}
           onSwitchMovie={setSelectedMovie}
+          user={user}
+          addAndPlay={addAndPlay}
         />
 
         <WishlistModal

@@ -1,17 +1,66 @@
 import React, { useState, useEffect } from 'react';
-import { X, Play, Star, Calendar, Clock, Youtube, Share2 } from 'lucide-react';
+import { X, Play, Star, Calendar, Clock, Youtube, Share2, Download, HardDrive } from 'lucide-react';
 import { movies as api } from '../services/api';
+import Loader from './Loader';
 
-const MovieDetailModal = ({ movie, isOpen, onClose, onPlay, wishlist, onToggleWishlist, onSwitchMovie }) => {
+const MovieDetailModal = ({ movie, isOpen, onClose, onPlay, wishlist, onToggleWishlist, onSwitchMovie, user, addAndPlay }) => {
     const [similarMovies, setSimilarMovies] = useState([]);
     const [showTrailer, setShowTrailer] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [downloadQuality, setDownloadQuality] = useState(null);
+    const [estimatedSize, setEstimatedSize] = useState(null);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     useEffect(() => {
         if (movie?.id) {
             api.getSuggestions(movie.id)
                 .then(res => setSimilarMovies(res.data.data.movies || []))
                 .catch(err => console.error("Error fetching suggestions:", err));
+        }
+    }, [movie]);
+
+    // Calculate download quality and size based on storage
+    useEffect(() => {
+        if (movie?.torrents) {
+            // Estimate available storage (using localStorage quota as proxy)
+            const estimateStorage = async () => {
+                try {
+                    const estimate = await navigator.storage.estimate();
+                    const availableGB = (estimate.quota - estimate.usage) / (1024 * 1024 * 1024);
+                    
+                    // Find torrents by quality
+                    const torrent1080p = movie.torrents.find(t => t.quality === '1080p');
+                    const torrent720p = movie.torrents.find(t => t.quality === '720p');
+                    const torrent2160p = movie.torrents.find(t => t.quality === '2160p' || t.quality === '4K');
+                    
+                    // Default to 1080p, upgrade if storage allows
+                    let selectedTorrent = torrent1080p || torrent720p;
+                    
+                    // If we have 4K and enough storage (>5GB free), prefer 4K
+                    if (torrent2160p && availableGB > 5) {
+                        selectedTorrent = torrent2160p;
+                    } 
+                    // If 1080p exists but storage is low (<2GB), downgrade to 720p
+                    else if (torrent1080p && availableGB < 2 && torrent720p) {
+                        selectedTorrent = torrent720p;
+                    }
+                    
+                    if (selectedTorrent) {
+                        setDownloadQuality(selectedTorrent.quality);
+                        setEstimatedSize((selectedTorrent.size_bytes / (1024 * 1024 * 1024)).toFixed(2));
+                    }
+                } catch (err) {
+                    // Fallback: just use 1080p or best available
+                    const torrent1080p = movie.torrents.find(t => t.quality === '1080p');
+                    const fallback = torrent1080p || movie.torrents[0];
+                    if (fallback) {
+                        setDownloadQuality(fallback.quality);
+                        setEstimatedSize((fallback.size_bytes / (1024 * 1024 * 1024)).toFixed(2));
+                    }
+                }
+            };
+            
+            estimateStorage();
         }
     }, [movie]);
 
@@ -110,7 +159,58 @@ const MovieDetailModal = ({ movie, isOpen, onClose, onPlay, wishlist, onToggleWi
                                     className="flex-1 sm:flex-none flex items-center justify-center gap-2 sm:gap-3 bg-white text-black px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base md:text-lg active:scale-95 sm:hover:scale-105 transition-transform shadow-lg shadow-white/10"
                                 >
                                     <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
-                                    <span>Play Movie</span>
+                                    <span>Stream Now</span>
+                                </button>
+
+                                <button
+                                    onClick={async () => {
+                                        if (!user) {
+                                            alert("Please login to download movies");
+                                            return;
+                                        }
+                                        setIsDownloading(true);
+                                        try {
+                                            // Find the torrent with selected quality
+                                            const torrent = movie.torrents.find(t => t.quality === downloadQuality) || movie.torrents[0];
+                                            if (!torrent) {
+                                                throw new Error("No torrent found");
+                                            }
+                                            
+                                            // Use the existing addAndPlay flow but for download
+                                            const url = await addAndPlay(torrent.hash, movie.title, true);
+                                            
+                                            // Create download link
+                                            const a = document.createElement('a');
+                                            a.href = url;
+                                            a.download = `${movie.title} (${downloadQuality}).mp4`;
+                                            document.body.appendChild(a);
+                                            a.click();
+                                            document.body.removeChild(a);
+                                            
+                                            alert(`Download started! Quality: ${downloadQuality}, Size: ~${estimatedSize}GB`);
+                                        } catch (error) {
+                                            alert("Failed to start download: " + (error.message || "Unknown error"));
+                                        } finally {
+                                            setIsDownloading(false);
+                                        }
+                                    }}
+                                    disabled={!downloadQuality || isDownloading}
+                                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-indigo-600 to-purple-600 border border-indigo-500/50 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base md:text-lg active:scale-95 sm:hover:scale-105 transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                                >
+                                    {isDownloading ? (
+                                        <>
+                                            <Loader className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" />
+                                            <span>Preparing...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Download className="w-5 h-5 sm:w-6 sm:h-6" />
+                                            <span>Download</span>
+                                            {downloadQuality && (
+                                                <span className="text-xs opacity-70">({downloadQuality})</span>
+                                            )}
+                                        </>
+                                    )}
                                 </button>
 
                                 <button
@@ -154,6 +254,14 @@ const MovieDetailModal = ({ movie, isOpen, onClose, onPlay, wishlist, onToggleWi
                                     </button>
                                 </div>
                             </div>
+
+                            {/* Storage Info */}
+                            {estimatedSize && (
+                                <div className="flex items-center gap-2 text-xs text-white/50 pt-2">
+                                    <HardDrive className="w-3 h-3" />
+                                    <span>Estimated size: ~{estimatedSize}GB at {downloadQuality}</span>
+                                </div>
+                            )}
 
                             {/* Similar Movies */}
                             {similarMovies.length > 0 && (
